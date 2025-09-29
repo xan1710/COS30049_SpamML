@@ -1,0 +1,21 @@
+PREPROCESSING REPORT
+==================================================
+
+Original Dataset:
+  Shape: (5572, 8)
+  Columns: ['category', 'message', 'number_ratio', 'special_char_ratio', 'sus_words_count', 'text_length', 'word_count', 'label']
+  Missing values: 0
+
+Cleaned Dataset:
+  Shape: (5145, 7)
+  Columns: ['message', 'number_ratio', 'special_char_ratio', 'sus_words_count', 'text_length', 'word_count', 'label']
+  Missing values: 0
+
+Label Distribution:
+  Ham (0): 4508 (87.6%)
+  Spam (1): 637 (12.4%)
+
+Crucial Features Summary:
+  number_ratio: μ=0.0182, σ=0.0486
+  special_char_ratio: μ=0.0384, σ=0.0291
+  sus_words_count: μ=0.3879, σ=0.7084
