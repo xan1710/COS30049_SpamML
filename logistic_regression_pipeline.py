@@ -13,20 +13,68 @@ import joblib
 from preprocessing import process_dataset, normalize_text, extract_crucial_features
 
 def load_and_combine_datasets(file_paths):
-    """Load and combine multiple datasets"""
+    """Load and combine multiple datasets including HuggingFace datasets"""
     dfs = []
-    for path in file_paths:
+    
+    for item in file_paths:
         try:
-            df = pd.read_csv(path, low_memory=False)
-            print(f"✅ Loaded {path}: {len(df):,} samples")
-            dfs.append(df)
+            # Handle HuggingFace datasets
+            if hasattr(item, 'to_pandas'):
+                df = item.to_pandas()
+                print(f"✅ Loaded HuggingFace dataset: {len(df):,} samples")
+                dfs.append(df)
+                
+            # Handle CSV files
+            elif isinstance(item, str):
+                df = pd.read_csv(item, low_memory=False)
+                print(f"✅ Loaded {item}: {len(df):,} samples")
+                dfs.append(df)
+                
         except Exception as e:
-            print(f"⚠️ Could not load {path}: {e}")
+            print(f"⚠️ Could not load dataset: {e}")
     
     if not dfs:
         raise ValueError("No datasets loaded successfully")
     
-    combined = pd.concat(dfs, ignore_index=True).drop_duplicates()
+    # Standardize all datasets before combining
+    standardized_dfs = []
+    for df in dfs:
+        # Standardize column names
+        df.columns = df.columns.str.lower().str.strip()
+        
+        # Find and standardize text column
+        text_candidates = ['text', 'message', 'body', 'email', 'content', 'mail']
+        text_col = None
+        for candidate in text_candidates:
+            if candidate in df.columns:
+                text_col = candidate
+                break
+        
+        if text_col and text_col != 'text':
+            df['text'] = df[text_col]
+        
+        # Find and standardize label column
+        label_candidates = ['label', 'spam', 'class', 'category', 'target']
+        label_col = None
+        for candidate in label_candidates:
+            if candidate in df.columns:
+                label_col = candidate
+                break
+        
+        if label_col and label_col != 'label':
+            df['label'] = df[label_col]
+        
+        # Keep essential columns
+        if 'text' in df.columns and 'label' in df.columns:
+            essential_cols = ['text', 'label']
+            # Add existing feature columns if present
+            feature_cols = ['number_ratio', 'special_char_ratio', 'sus_words_count', 'text_length', 'word_count']
+            available_features = [col for col in feature_cols if col in df.columns]
+            
+            df_standardized = df[essential_cols + available_features]
+            standardized_dfs.append(df_standardized)
+    
+    combined = pd.concat(standardized_dfs, ignore_index=True).drop_duplicates()
     print(f"📊 Combined dataset: {len(combined):,} samples")
     return combined
 
@@ -132,6 +180,8 @@ def main():
     print("="*50)
     
     # Load datasets
+    from datasets import load_dataset
+    hf_dataset = load_dataset("yxzwayne/email-spam-10k", split="train")
     datasets = ['cleaned_emails.csv', 'cleaned_mail_data.csv', 'cleaned_CEAS_08.csv']
     try:
         df = load_and_combine_datasets(datasets)
@@ -151,16 +201,24 @@ def main():
     
     # Save model
     model_artifacts = (model, vectorizer, feature_names)
-    joblib.dump(model_artifacts, 'spam_classifier.pkl')
-    print("💾 Model saved as 'spam_classifier.pkl'")
+    joblib.dump(model_artifacts, 'logistic_regression_model.pkl')
+    print("💾 Model saved as 'logistic_regression_model.pkl'")
     
     # Test predictions
     print("\n🧪 Testing predictions...")
     test_emails = [
-        "FREE MONEY! You have won $1,000,000! Click here now!",
-        "Hi John, thanks for the meeting today. See you tomorrow.",
-        "URGENT! Your account needs verification! Click this link!",
-        "Meeting reminder: Team standup at 10 AM in conference room."
+        "FREE MONEY! Click here to win $10000 now! Limited time offer!",
+        "Hi John, let's meet for lunch tomorrow at 12pm. Looking forward to seeing you!",
+        "Dear user, you have won a prize! claim now",
+        "Meeting agenda attached for project update", 
+        "Urgent: verify your bank account immediately",
+        "Lunch plans? Let me know your preference",
+        "Free gift card available: update your info",
+        "Congratulations! You've won $1 million dollars!",
+        "Your account needs verification. Click here now!",
+        "Team meeting scheduled for tomorrow at 3pm",
+        "Invoice attached for your recent purchase",
+        "Limited time offer - act now to save money!"
     ]
     
     for i, email in enumerate(test_emails, 1):
