@@ -151,10 +151,6 @@ def process_all_datasets():
         combined_path = os.path.join(CLEANED_DIR, "combined_email_dataset.csv")
         combined_df.to_csv(combined_path, index=False)
 
-def get_feature_columns():
-    """Return ML-ready feature columns"""
-    return ['number_ratio', 'special_char_ratio', 'spam_words', 'text_length', 'word_count']
-
 def load_cleaned_data(filename=None):
     """Load processed dataset for ML training"""
     if filename is None:
@@ -174,7 +170,6 @@ def load_cleaned_data(filename=None):
 
 if __name__ == "__main__":
     process_all_datasets()
-    
     df = load_cleaned_data()
     if df is not None:
         print(df.head())

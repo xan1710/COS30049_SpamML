@@ -4,230 +4,153 @@
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, GridSearchCV
+from pathlib import Path
+from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
+from sklearn.metrics import classification_report, roc_auc_score, accuracy_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.sparse import hstack
 import joblib
-from preprocessing import process_dataset, normalize_text, extract_crucial_features
+from preprocessing import load_cleaned_data, clean_text, extract_spam_features
 
-def load_and_combine_datasets(file_paths):
-    """Load and combine multiple datasets including HuggingFace datasets"""
-    dfs = []
-    
-    for item in file_paths:
-        try:
-            # Handle HuggingFace datasets
-            if hasattr(item, 'to_pandas'):
-                df = item.to_pandas()
-                print(f"✅ Loaded HuggingFace dataset: {len(df):,} samples")
-                dfs.append(df)
-                
-            # Handle CSV files
-            elif isinstance(item, str):
-                df = pd.read_csv(item, low_memory=False)
-                print(f"✅ Loaded {item}: {len(df):,} samples")
-                dfs.append(df)
-                
-        except Exception as e:
-            print(f"⚠️ Could not load dataset: {e}")
-    
-    if not dfs:
-        raise ValueError("No datasets loaded successfully")
-    
-    # Standardize all datasets before combining
-    standardized_dfs = []
-    for df in dfs:
-        # Standardize column names
-        df.columns = df.columns.str.lower().str.strip()
-        
-        # Find and standardize text column
-        text_candidates = ['text', 'message', 'body', 'email', 'content', 'mail']
-        text_col = None
-        for candidate in text_candidates:
-            if candidate in df.columns:
-                text_col = candidate
-                break
-        
-        if text_col and text_col != 'text':
-            df['text'] = df[text_col]
-        
-        # Find and standardize label column
-        label_candidates = ['label', 'spam', 'class', 'category', 'target']
-        label_col = None
-        for candidate in label_candidates:
-            if candidate in df.columns:
-                label_col = candidate
-                break
-        
-        if label_col and label_col != 'label':
-            df['label'] = df[label_col]
-        
-        # Keep essential columns
-        if 'text' in df.columns and 'label' in df.columns:
-            essential_cols = ['text', 'label']
-            # Add existing feature columns if present
-            feature_cols = ['number_ratio', 'special_char_ratio', 'sus_words_count', 'text_length', 'word_count']
-            available_features = [col for col in feature_cols if col in df.columns]
-            
-            df_standardized = df[essential_cols + available_features]
-            standardized_dfs.append(df_standardized)
-    
-    combined = pd.concat(standardized_dfs, ignore_index=True).drop_duplicates()
-    print(f"📊 Combined dataset: {len(combined):,} samples")
-    return combined
+MODELS_DIR = Path("saved_models")
 
-def prepare_features(df, text_col='text', max_features=1000):
-    """Extract and combine TF-IDF and engineered features"""
-    # TF-IDF features
-    vectorizer = TfidfVectorizer(
-        stop_words='english', 
-        max_features=max_features, 
-        ngram_range=(1,2)
-    )
-    X_tfidf = vectorizer.fit_transform(df[text_col].fillna(''))
+class SpamClassifier:
+    def __init__(self, max_features=1000):
+        self.vectorizer = TfidfVectorizer(
+            stop_words='english', max_features=max_features, 
+            ngram_range=(1, 2), min_df=2, max_df=0.95
+        )
+        self.model = LogisticRegression(C=10, random_state=42, max_iter=20000)
+        self.feature_names = []
     
-    # Engineered features
-    feature_names = ['number_ratio', 'special_char_ratio', 'sus_words_count', 
-                    'text_length', 'word_count']
-    
-    # Create missing features if they don't exist
-    for feat in feature_names:
-        if feat not in df.columns:
-            if feat == 'text_length':
-                df[feat] = df[text_col].str.len().fillna(0)
-            elif feat == 'word_count':
-                df[feat] = df[text_col].str.split().str.len().fillna(0)
-            else:
-                # Extract from text using preprocessing function
-                features_dict = df[text_col].fillna('').apply(extract_crucial_features)
-                df[feat] = features_dict.apply(lambda x: x.get(feat, 0))
-    
-    X_features = df[feature_names].fillna(0).values
-    
-    # Combine features
-    X = hstack([X_tfidf, X_features])
-    y = df['label'].values
-    
-    return X, y, vectorizer, feature_names
-
-def train_model(X, y):
-    """Train logistic regression with grid search"""
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
-    X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp
-    )
-    
-    # Grid search
-    param_grid = {'C': [0.1, 1, 10], 'solver': ['lbfgs', 'liblinear']}
-    grid = GridSearchCV(
-        LogisticRegression(random_state=42, max_iter=1000),
-        param_grid, cv=3, scoring='roc_auc', n_jobs=-1
-    )
-    grid.fit(X_train, y_train)
-    
-    # Evaluate
-    y_val_pred = grid.predict(X_val)
-    y_test_pred = grid.predict(X_test)
-    val_auc = roc_auc_score(y_val, grid.predict_proba(X_val)[:, 1])
-    test_auc = roc_auc_score(y_test, grid.predict_proba(X_test)[:, 1])
-    
-    print(f"🎯 Best params: {grid.best_params_}")
-    print(f"🎯 Validation AUC: {val_auc:.4f}")
-    print(f"🎯 Test AUC: {test_auc:.4f}")
-    print("\nTest Set Classification Report:")
-    print(classification_report(y_test, y_test_pred, target_names=['Ham', 'Spam']))
-    
-    return grid.best_estimator_, test_auc
-
-def predict_single_email(text, model_artifacts):
-    """Predict spam probability for a single email"""
-    try:
-        model, vectorizer, feature_names = model_artifacts
+    def prepare_features(self, df):
+        """Extract and combine TF-IDF and engineered features"""
+        X_tfidf = self.vectorizer.fit_transform(df['text'].fillna(''))
         
-        # Clean text and extract features
-        clean_text = normalize_text(text)
-        X_tfidf = vectorizer.transform([clean_text])
+        # Get numeric feature columns (exclude text and label)
+        self.feature_names = [col for col in df.columns if col not in ['text', 'label']]
+        X_features = df[self.feature_names].fillna(0).values
         
-        # Extract numerical features
-        features = extract_crucial_features(clean_text)
-        features.update({
-            'text_length': len(clean_text),
-            'word_count': len(clean_text.split()) if clean_text else 0
-        })
+        X = hstack([X_tfidf, X_features])
+        return X, df['label'].values
+    
+    def train(self, X, y):
+        """Train the model and return evaluation metrics"""
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y
+        )
         
-        X_features = np.array([[features.get(f, 0) for f in feature_names]])
+        self.model.fit(X_train, y_train)
+        
+        # Evaluate
+        y_pred = self.model.predict(X_test)
+        y_proba = self.model.predict_proba(X_test)[:, 1]
+        
+        results = {
+            'accuracy': accuracy_score(y_test, y_pred),
+            'auc': roc_auc_score(y_test, y_proba)
+        }
+        
+        print(f"🎯 Test Accuracy: {results['accuracy']:.4f}")
+        print(f"🎯 Test AUC: {results['auc']:.4f}")
+        print("\n📋 Classification Report:")
+        print(classification_report(y_test, y_pred, target_names=['Ham', 'Spam']))
+        
+        return results
+    
+    def predict(self, text):
+        """Predict spam probability for a single email"""
+        clean_text_input = clean_text(text)
+        if not clean_text_input:
+            return {'error': 'Empty text after cleaning'}
+        
+        # Prepare features
+        X_tfidf = self.vectorizer.transform([clean_text_input])
+        spam_features = extract_spam_features(clean_text_input)
+        text_stats = [len(clean_text_input), len(clean_text_input.split())]
+        X_features = np.array([spam_features + text_stats])
         X_combined = hstack([X_tfidf, X_features])
         
         # Predict
-        prediction = model.predict(X_combined)[0]
-        probability = model.predict_proba(X_combined)[0]
+        prediction = self.model.predict(X_combined)[0] # type: ignore
+        probability = self.model.predict_proba(X_combined)[0, 1] #
         
         return {
             'prediction': 'Spam' if prediction == 1 else 'Ham',
-            'spam_probability': probability[1],
-            'confidence': max(probability)
+            'spam_probability': float(probability),
+            'confidence': float(max(self.model.predict_proba(X_combined)[0]))
         }
-    except Exception as e:
-        return {'error': f"Prediction failed: {str(e)}"}
+    
+    def save(self, filename="spam_classifier.joblib"):
+        """Save model artifacts"""
+        MODELS_DIR.mkdir(exist_ok=True)
+        model_path = MODELS_DIR / filename
+        
+        artifacts = {
+            'model': self.model,
+            'vectorizer': self.vectorizer,
+            'feature_names': self.feature_names
+        }
+        
+        joblib.dump(artifacts, model_path)
+        print(f"💾 Model saved to: {model_path}")
+        return model_path
+    
+    @classmethod
+    def load(cls, filename="spam_classifier.joblib"):
+        """Load saved model"""
+        model_path = MODELS_DIR / filename
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model not found: {model_path}")
+        
+        artifacts = joblib.load(model_path)
+        classifier = cls()
+        classifier.model = artifacts['model']
+        classifier.vectorizer = artifacts['vectorizer']
+        classifier.feature_names = artifacts['feature_names']
+        
+        print(f"📥 Model loaded from: {model_path}")
+        return classifier
 
-def main():
-    print("="*50)
-    print("SPAM CLASSIFICATION PIPELINE")
-    print("="*50)
-    
-    # Load datasets
-    from datasets import load_dataset
-    hf_dataset = load_dataset("yxzwayne/email-spam-10k", split="train")
-    datasets = ['cleaned_emails.csv', 'cleaned_mail_data.csv', 'cleaned_CEAS_08.csv']
-    try:
-        df = load_and_combine_datasets(datasets)
-    except:
-        # Fallback to single dataset
-        df = pd.read_csv('cleaned_emails.csv')
-        print(f"📊 Using single dataset: {len(df):,} samples")
-    
-    # Prepare features
-    print("\n🔧 Preparing features...")
-    X, y, vectorizer, feature_names = prepare_features(df)
-    print(f"✅ Features ready: {X.shape[1]:,} total features") # type: ignore
-    
-    # Train model
-    print("\n🤖 Training model...")
-    model, test_auc = train_model(X, y)
-    
-    # Save model
-    model_artifacts = (model, vectorizer, feature_names)
-    joblib.dump(model_artifacts, 'logistic_regression_model.pkl')
-    print("💾 Model saved as 'logistic_regression_model.pkl'")
-    
-    # Test predictions
-    print("\n🧪 Testing predictions...")
+def test_predictions(classifier):
+    """Test model with sample emails"""
     test_emails = [
-        "FREE MONEY! Click here to win $10000 now! Limited time offer!",
-        "Hi John, let's meet for lunch tomorrow at 12pm. Looking forward to seeing you!",
-        "Dear user, you have won a prize! claim now",
-        "Meeting agenda attached for project update", 
+        "FREE MONEY! Click here to win $10000 now!",
+        "Hi John, let's meet for lunch tomorrow at 12pm.",
         "Urgent: verify your bank account immediately",
-        "Lunch plans? Let me know your preference",
-        "Free gift card available: update your info",
-        "Congratulations! You've won $1 million dollars!",
-        "Your account needs verification. Click here now!",
-        "Team meeting scheduled for tomorrow at 3pm",
-        "Invoice attached for your recent purchase",
-        "Limited time offer - act now to save money!"
+        "Meeting agenda attached for project update"
     ]
     
+    print("\n🧪 Testing predictions:")
     for i, email in enumerate(test_emails, 1):
-        result = predict_single_email(email, model_artifacts)
+        result = classifier.predict(email)
         if 'error' not in result:
-            print(f"Email {i}: {result['prediction']} "
-                  f"(confidence: {result['confidence']:.3f})")
+            preview = email[:40] + ('...' if len(email) > 40 else '')
+            print(f"{i}. {result['prediction']} ({result['confidence']:.3f}) - {preview}")
+
+def main():
+    """Main pipeline execution"""
+    print("🚀 SPAM CLASSIFICATION PIPELINE")
+    print("=" * 40)
     
-    print(f"\n🎉 Pipeline complete! Final AUC: {test_auc:.4f}")
+    # Load data
+    df = load_cleaned_data()
+    if df is None:
+        raise ValueError("No cleaned data found. Run preprocessing first.")
+    
+    print(f"📊 Dataset: {len(df):,} samples, {df['label'].mean():.2%} spam")
+    
+    # Train model
+    classifier = SpamClassifier()
+    X, y = classifier.prepare_features(df)
+    results = classifier.train(X, y)
+    
+    # Save and test
+    classifier.save()
+    test_predictions(classifier)
+    
+    print(f"\n🎉 Pipeline completed! AUC: {results['auc']:.4f}")
 
 if __name__ == "__main__":
     main()

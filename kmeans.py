@@ -8,13 +8,15 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
 
+from preprocessing import DATA_DIR
+
 # Load your dataset
-df = pd.read_csv('cleaned_emails.csv') 
+df = pd.read_csv(DATA_DIR / "cleaned_datasets" / "combined_email_dataset.csv")
 
 # Basic preprocessing
 
 X_text = df['text']
-y = df['spam']
+y = df['label']
 
 # Text vectorization
 vectorizer = TfidfVectorizer()
@@ -45,20 +47,20 @@ plt.show()
 joblib.dump(clf, 'spam_classifier.joblib')
 joblib.dump(vectorizer, 'vectorizer.joblib')
 
-# --- Clustering ---
-kmeans = KMeans(n_clusters=2, random_state=42)
-clusters = kmeans.fit_predict(X)
+# # --- Clustering ---
+# kmeans = KMeans(n_clusters=2, random_state=42)
+# clusters = kmeans.fit_predict(X)
 
-# Evaluation for clustering
-score = silhouette_score(X, clusters)
-print("Clustering Silhouette Score:", score)
+# # Evaluation for clustering
+# score = silhouette_score(X, clusters)
+# print("Clustering Silhouette Score:", score)
 
-# Visualize cluster sizes
-plt.bar([0, 1], [(clusters == 0).sum(), (clusters == 1).sum()])
-plt.title('Cluster Sizes')
-plt.xlabel('Cluster')
-plt.ylabel('Number of Samples')
-plt.show()
+# # Visualize cluster sizes
+# plt.bar([0, 1], [(clusters == 0).sum(), (clusters == 1).sum()])
+# plt.title('Cluster Sizes')
+# plt.xlabel('Cluster')
+# plt.ylabel('Number of Samples')
+# plt.show()
 
-# Save the clustering model
-joblib.dump(kmeans, 'spam_kmeans.joblib')
+# # Save the clustering model
+# joblib.dump(kmeans, 'spam_kmeans.joblib')
