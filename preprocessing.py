@@ -5,11 +5,6 @@
 # including handling missing values, text normalization, feature extraction,
 # and adaptive dataset handling for various email datasets.
 
-
-# preprocessing.py
-# Simplified Email Spam Detection Preprocessing
-# Maintains high performance with cleaner, more focused code
-
 import pandas as pd
 import re
 import numpy as np
@@ -18,12 +13,12 @@ from pathlib import Path
 
 # Dataset Configuration
 DATA_DIR = Path("datasets")
-DATASETS_DIR = DATA_DIR / "raw_datasets"
+RAW_DIR = DATA_DIR / "raw_datasets"
 CLEANED_DIR = DATA_DIR / "cleaned_datasets"
 
 def setup_directories():
     """Create necessary directories for datasets"""
-    os.makedirs(DATASETS_DIR, exist_ok=True)
+    os.makedirs(RAW_DIR, exist_ok=True)
     os.makedirs(CLEANED_DIR, exist_ok=True)
 
 def detect_columns(df):
@@ -53,6 +48,7 @@ def detect_columns(df):
 
 def clean_text(text):
     """Clean and normalize text efficiently"""
+    # Handle NaN values
     if pd.isna(text):
         return ''
     
@@ -61,21 +57,31 @@ def clean_text(text):
     text = re.sub(r'http\S+|www\S+|https\S+', ' ', text)  # Remove URLs
     text = re.sub(r'\S+@\S+', ' ', text)  # Remove emails
     text = re.sub(r'\d+', ' ', text)  # Remove numbers
-    text = text.replace('#', ' ').replace('@', ' ')
-    text = re.sub(r'[^a-z0-9\s.,!?\'-]', ' ', text)
-    text = re.sub(r'\s+', ' ', text).strip()
+    text = text.replace('#', ' ').replace('@', ' ') #Remove # and @
+    text = re.sub(r'[^a-z0-9\s.,!?\'-]', ' ', text) # Keep basic punctuation
+    text = re.sub(r'\s+', ' ', text).strip() # Remove extra spaces
+    text = re.sub(r'\.{2,}', ' ', text)  # Replace multiple dots with space
+    text = re.sub(r'-{2,}', ' ', text)  # Replace multiple hyphens with space
+    text = re.sub(r'_{2,}', ' ', text)  # Replace multiple underscores with space
+    text = re.sub(r'!{4,}', '!', text)  # Replace multiple exclamation marks
+    text = re.sub(r'\?{3,}', '?', text)  # Replace multiple question marks
+    text = re.sub(r'\s+', ' ', text)  # Remove extra spaces
     return text
 
-def extract_spam_features(text):
+def extract_features(text):
     """Extract spam detection features"""
+    # Basic checks
     if not text:
         return [0, 0, 0]
     
+    # Ratio of numbers and special characters
     number_ratio = sum(c.isdigit() for c in text) / len(text)
     special_ratio = sum(not c.isalnum() and not c.isspace() for c in text) / len(text)
-    
-    spam_words = ['free', 'win', 'urgent', 'money', 'click', 'now', 'offer', 
+
+    # List of spam words
+    spam_words = ['free', 'win', 'urgent', 'money', 'click', 'now', 'offer',
                   'prize', 'deal', 'cash', 'gift', 'verify', 'guaranteed']
+    # Count spam words
     spam_count = sum(1 for word in spam_words if word in text.lower())
     
     return [number_ratio, special_ratio, spam_count]
@@ -100,11 +106,11 @@ def preprocess_dataset(file_path):
     
     # Create clean dataset
     df_clean = pd.DataFrame()
-    df_clean['text'] = df[text_col].apply(clean_text)
+    df_clean['text'] = clean_text(df[text_col])
     df_clean['label'] = standardize_labels(df[label_col])
     
     # Extract features
-    features = df_clean['text'].apply(extract_spam_features)
+    features = df_clean['text'].apply(extract_features)
     df_clean[['number_ratio', 'special_char_ratio', 'spam_words']] = pd.DataFrame(features.tolist())
     
     # Add text stats
@@ -120,18 +126,20 @@ def process_all_datasets():
     """Process all datasets in the datasets directory"""
     setup_directories()
     
-    if not os.path.exists(DATASETS_DIR):
+    if not os.path.exists(RAW_DIR):
         return
     
-    csv_files = [f for f in os.listdir(DATASETS_DIR) if f.endswith('.csv')]
+    # Find all CSV files
+    csv_files = [f for f in os.listdir(RAW_DIR) if f.endswith('.csv')]
     if not csv_files:
         return
     
     all_datasets = []
     
+    # Process each dataset
     for csv_file in csv_files:
         try:
-            input_path = os.path.join(DATASETS_DIR, csv_file)
+            input_path = os.path.join(RAW_DIR, csv_file)
             output_path = os.path.join(CLEANED_DIR, f"cleaned_{csv_file}")
             
             df_clean = preprocess_dataset(input_path)
@@ -153,6 +161,7 @@ def process_all_datasets():
 
 def load_cleaned_data(filename=None):
     """Load processed dataset for ML training"""
+    # Adaptive loading of combined or individual cleaned datasets
     if filename is None:
         combined_file = os.path.join(CLEANED_DIR, "combined_email_dataset.csv")
         if os.path.exists(combined_file):
@@ -169,7 +178,12 @@ def load_cleaned_data(filename=None):
     return df
 
 if __name__ == "__main__":
+    print("="*40)
+    print("🚀 SPAM CLASSIFIER PREPROCESSING")
+    print("="*40)
     process_all_datasets()
     df = load_cleaned_data()
     if df is not None:
+        print("Preprocessing completed. Sample data:")
+        print(df.info())
         print(df.head())

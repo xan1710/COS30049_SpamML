@@ -1,152 +1,130 @@
+# Simplified Logistic Regression Spam Classification Pipeline
+# Author: Your Name
+# Date: 2025-09-30
+
 import pandas as pd
 import numpy as np
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, roc_auc_score, accuracy_score
+from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.feature_extraction.text import TfidfVectorizer
-from scipy.sparse import hstack
+from sklearn.preprocessing import StandardScaler
+from scipy.sparse import hstack, csr_matrix
 import joblib
-from preprocessing import load_cleaned_data, clean_text, extract_spam_features
+from preprocessing import load_cleaned_data, clean_text, extract_features
 
-MODELS_DIR = Path("saved_models")
+# Load dataset
+df = load_cleaned_data()
+if df is None:
+    raise ValueError("No data found. Run preprocessing first.")
 
-class SpamClassifier:
-    def __init__(self, max_features=1000):
-        self.vectorizer = TfidfVectorizer(
-            stop_words='english', max_features=max_features, 
-            ngram_range=(1, 2), min_df=2, max_df=0.95
-        )
-        self.model = LogisticRegression(C=10, random_state=42, max_iter=20000)
-        self.feature_names = []
+print(f"📊 {len(df):,} samples, {df['label'].mean():.1%} spam")
+
+# Receive and preprocess features
+X_text = df['text'].fillna('')
+y = df['label']
+
+# Feature preparation - Essential feature 1: Combined TF-IDF + engineered features
+vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)
+X_tfidf = vectorizer.fit_transform(X_text)
+
+# Extract spam features for each text
+spam_features = [extract_features(str(text)) + [len(str(text)), len(str(text).split())] 
+                for text in X_text]
+X_features = np.array(spam_features)
+print(f"Extracted engineered features shape: {X_features.shape}")
+
+# Scale the engineered features only (TF-IDF is already normalized)
+scaler = StandardScaler()
+X_features_scaled = scaler.fit_transform(X_features)
+
+# Combine TF-IDF with scaled engineered features
+X = hstack([X_tfidf, csr_matrix(X_features_scaled)])
+y = df['label']
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+# Train model - Essential feature 2: Optimized LogisticRegression
+model = LogisticRegression(C=10, random_state=42, max_iter=20000)
+model.fit(X_train, y_train)
+
+# Debug: Print training feature dimensions
+print(f"Training features shape: {X_train.shape}")
+print(f"TF-IDF features: {X_tfidf.shape[1]}")
+print(f"Engineered features: {X_features.shape[1]}")
+print(f"Expected total features: {X_tfidf.shape[1] + X_features.shape[1]}")
+
+# Test feature extraction consistency
+test_text = "sample test text"
+test_spam_features = extract_features(test_text)
+test_text_stats = [len(test_text), len(test_text.split())]
+print(f"Sample feature extraction length: {len(test_spam_features + test_text_stats)}")
+
+# Evaluation
+y_pred = model.predict(X_test)
+auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
+
+print(f"🎯 AUC: {auc:.4f}")
+print(classification_report(y_test, y_pred, target_names=['Ham', 'Spam']))
+
+# Save model, vectorizer, and scaler
+Path("saved_models").mkdir(exist_ok=True)
+joblib.dump({
+    'model': model, 
+    'vectorizer': vectorizer, 
+    'scaler': scaler
+}, 'saved_models/model.joblib')
+print("💾 Model saved")
+
+# Test predictions - Essential feature 3: Real-time prediction capability
+def predict_email(text):
+    clean_text_input = clean_text(text)
+    if not clean_text_input:
+        return "Error: Empty text"
     
-    def prepare_features(self, df):
-        """Extract and combine TF-IDF and engineered features"""
-        X_tfidf = self.vectorizer.fit_transform(df['text'].fillna(''))
+    try:
+        # Transform text with TF-IDF
+        X_tfidf = vectorizer.transform([clean_text_input]) 
         
-        # Get numeric feature columns (exclude text and label)
-        self.feature_names = [col for col in df.columns if col not in ['text', 'label']]
-        X_features = df[self.feature_names].fillna(0).values
-        
-        X = hstack([X_tfidf, X_features])
-        return X, df['label'].values
-    
-    def train(self, X, y):
-        """Train the model and return evaluation metrics"""
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
-        )
-        
-        self.model.fit(X_train, y_train)
-        
-        # Evaluate
-        y_pred = self.model.predict(X_test)
-        y_proba = self.model.predict_proba(X_test)[:, 1]
-        
-        results = {
-            'accuracy': accuracy_score(y_test, y_pred),
-            'auc': roc_auc_score(y_test, y_proba)
-        }
-        
-        print(f"🎯 Test Accuracy: {results['accuracy']:.4f}")
-        print(f"🎯 Test AUC: {results['auc']:.4f}")
-        print("\n📋 Classification Report:")
-        print(classification_report(y_test, y_pred, target_names=['Ham', 'Spam']))
-        
-        return results
-    
-    def predict(self, text):
-        """Predict spam probability for a single email"""
-        clean_text_input = clean_text(text)
-        if not clean_text_input:
-            return {'error': 'Empty text after cleaning'}
-        
-        # Prepare features
-        X_tfidf = self.vectorizer.transform([clean_text_input])
-        spam_features = extract_spam_features(clean_text_input)
+        # Extract and scale engineered features
+        spam_features = extract_features(clean_text_input)
         text_stats = [len(clean_text_input), len(clean_text_input.split())]
         X_features = np.array([spam_features + text_stats])
-        X_combined = hstack([X_tfidf, X_features])
         
-        # Predict
-        prediction = self.model.predict(X_combined)[0]
-        probability = self.model.predict_proba(X_combined)[0, 1]
+        # Debug: Check feature dimensions
+        print(f"Debug - Spam features length: {len(spam_features)}")
+        print(f"Debug - X_features shape: {X_features.shape}")
         
-        return {
-            'prediction': 'Spam' if prediction == 1 else 'Ham',
-            'spam_probability': float(probability),
-            'confidence': float(max(self.model.predict_proba(X_combined)[0]))
-        }
-    
-    def save(self, filename="spam_classifier.joblib"):
-        """Save model artifacts"""
-        MODELS_DIR.mkdir(exist_ok=True)
-        model_path = MODELS_DIR / filename
+        # Scale the features using the fitted scaler
+        X_features_scaled = scaler.transform(X_features)
         
-        artifacts = {
-            'model': self.model,
-            'vectorizer': self.vectorizer,
-            'feature_names': self.feature_names
-        }
+        # Combine features - ensure both are sparse matrices
+        X_combined = hstack([X_tfidf, csr_matrix(X_features_scaled)])
+        X_combined = X_combined.tocsr()  # Ensure the matrix is in CSR format
         
-        joblib.dump(artifacts, model_path)
-        print(f"💾 Model saved to: {model_path}")
-        return model_path
-    
-    @classmethod
-    def load(cls, filename="spam_classifier.joblib"):
-        """Load saved model"""
-        model_path = MODELS_DIR / filename
-        if not model_path.exists():
-            raise FileNotFoundError(f"Model not found: {model_path}")
+        # Debug: Check final shape
+        print(f"Debug - X_combined shape: {X_combined.shape}")
         
-        artifacts = joblib.load(model_path)
-        classifier = cls()
-        classifier.model = artifacts['model']
-        classifier.vectorizer = artifacts['vectorizer']
-        classifier.feature_names = artifacts['feature_names']
+        probability = model.predict_proba(X_combined)[0, 1]
+        prediction = "Spam" if probability > 0.5 else "Ham"
+        return f"{prediction} ({probability:.3f})"
         
-        print(f"📥 Model loaded from: {model_path}")
-        return classifier
+    except Exception as e:
+        return f"Prediction error: {str(e)} - Feature shape mismatch likely"
 
-def test_predictions(classifier):
-    """Test model with sample emails"""
-    test_emails = [
-        "FREE MONEY! Click here to win $10000 now!",
-        "Hi John, let's meet for lunch tomorrow at 12pm.",
-        "Urgent: verify your bank account immediately",
-        "Meeting agenda attached for project update"
-    ]
-    
-    print("\n🧪 Testing predictions:")
-    for i, email in enumerate(test_emails, 1):
-        result = classifier.predict(email)
-        if 'error' not in result:
-            preview = email[:40] + ('...' if len(email) > 40 else '')
-            print(f"{i}. {result['prediction']} ({result['confidence']:.3f}) - {preview}")
+# Test with sample emails
+test_emails = [
+    "FREE MONEY! Click now!",
+    "Meeting at 2pm tomorrow",
+    "Urgent: verify account",
+    "Project update attached"
+]
 
-def main():
-    """Main pipeline execution"""
-    print("🚀 SPAM CLASSIFICATION PIPELINE")
-    print("=" * 40)
-    
-    # Load data
-    df = load_cleaned_data()
-    if df is None:
-        raise ValueError("No cleaned data found. Run preprocessing first.")
-    
-    print(f"📊 Dataset: {len(df):,} samples, {df['label'].mean():.2%} spam")
-    
-    # Train model
-    classifier = SpamClassifier()
-    X, y = classifier.prepare_features(df)
-    results = classifier.train(X, y)
-    
-    # Save and test
-    classifier.save()
-    test_predictions(classifier)
-    
-    print(f"\n🎉 Pipeline completed! AUC: {results['auc']:.4f}")
+print("\n🧪 Test predictions:")
+for i, email in enumerate(test_emails, 1):
+    result = predict_email(email)
+    print(f"{i}. {result} - {email[:30]}...")
 
-if __name__ == "__main__":
-    main()
+print(f"\n🎉 Completed! AUC: {auc:.4f}")
