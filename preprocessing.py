@@ -17,12 +17,13 @@ RAW_DIR = DATA_DIR / "raw_datasets"
 CLEANED_DIR = DATA_DIR / "cleaned_datasets"
 
 def setup_directories():
-    """Create necessary directories for datasets"""
+    # Ensure necessary directories exist
+    os.makedirs(DATA_DIR, exist_ok=True)
     os.makedirs(RAW_DIR, exist_ok=True)
     os.makedirs(CLEANED_DIR, exist_ok=True)
 
 def detect_columns(df):
-    """Auto-detect text and label columns"""
+    # Auto-detect text and label columns
     text_col, label_col = None, None
     
     # Find text column
@@ -69,25 +70,24 @@ def clean_text(text):
     return text
 
 def extract_features(text):
-    """Extract spam detection features"""
-    # Basic checks
+    # Basic checks for empty text
     if not text:
         return [0, 0, 0]
     
-    # Ratio of numbers and special characters
+    # Ratio of numbers and special characters to total characters
     number_ratio = sum(c.isdigit() for c in text) / len(text)
     special_ratio = sum(not c.isalnum() and not c.isspace() for c in text) / len(text)
 
-    # List of spam words
+    # List of common spam words for counting
     spam_words = ['free', 'win', 'urgent', 'money', 'click', 'now', 'offer',
                   'prize', 'deal', 'cash', 'gift', 'verify', 'guaranteed']
-    # Count spam words
+    # Count spam words in text
     spam_count = sum(1 for word in spam_words if word in text.lower())
     
     return [number_ratio, special_ratio, spam_count]
 
 def standardize_labels(labels):
-    """Convert labels to binary (0=ham, 1=spam)"""
+    # Convert various label formats to binary (0: ham, 1: spam)
     if labels.dtype == 'object':
         labels = labels.astype(str).str.lower()
         spam_terms = ['1', 'spam', 'true', 'yes', 'positive']
@@ -96,24 +96,24 @@ def standardize_labels(labels):
         return (labels > 0.5).astype(int)
 
 def preprocess_dataset(file_path):
-    """Main preprocessing function"""
+    # Preprocess a single dataset file
     df = pd.read_csv(file_path)
     
-    # Auto-detect columns
+    # Auto-detect columns if not specified
     text_col, label_col = detect_columns(df)
     if not text_col or not label_col:
         return None
     
-    # Create clean dataset
+    # Create clean dataset DataFrame
     df_clean = pd.DataFrame()
     df_clean['text'] = clean_text(df[text_col])
     df_clean['label'] = standardize_labels(df[label_col])
     
-    # Extract features
+    # Extract features and add to DataFrame
     features = df_clean['text'].apply(extract_features)
     df_clean[['number_ratio', 'special_char_ratio', 'spam_words']] = pd.DataFrame(features.tolist())
     
-    # Add text stats
+    # Add simple text stats as features 
     df_clean['text_length'] = df_clean['text'].str.len()
     df_clean['word_count'] = df_clean['text'].str.split().str.len()
     
@@ -123,20 +123,21 @@ def preprocess_dataset(file_path):
     return df_clean
 
 def process_all_datasets():
-    """Process all datasets in the datasets directory"""
+    # Process all datasets in RAW_DIR and save cleaned versions
     setup_directories()
     
+    # Check if RAW_DIR exists and has files to process
     if not os.path.exists(RAW_DIR):
         return
     
-    # Find all CSV files
+    # Find all CSV files in RAW_DIR
     csv_files = [f for f in os.listdir(RAW_DIR) if f.endswith('.csv')]
     if not csv_files:
         return
     
     all_datasets = []
     
-    # Process each dataset
+    # Process each dataset file, only when it exists as "cleaned" version
     for csv_file in csv_files:
         try:
             input_path = os.path.join(RAW_DIR, csv_file)
@@ -151,7 +152,7 @@ def process_all_datasets():
         except Exception as e:
             continue
     
-    # Create combined dataset
+    # Create combined dataset if multiple datasets were processed
     if all_datasets:
         combined_df = pd.concat(all_datasets, ignore_index=True)
         combined_df = combined_df.drop_duplicates().reset_index(drop=True)
@@ -159,19 +160,20 @@ def process_all_datasets():
         combined_path = os.path.join(CLEANED_DIR, "combined_email_dataset.csv")
         combined_df.to_csv(combined_path, index=False)
 
-def load_cleaned_data(filename=None):
-    """Load processed dataset for ML training"""
+def load_dataset(filename=None):
     # Adaptive loading of combined or individual cleaned datasets
     if filename is None:
         combined_file = os.path.join(CLEANED_DIR, "combined_email_dataset.csv")
         if os.path.exists(combined_file):
             filename = "combined_email_dataset.csv"
         else:
+            # Load the first available cleaned dataset
             cleaned_files = [f for f in os.listdir(CLEANED_DIR) if f.startswith('cleaned_')]
             if not cleaned_files:
                 return None
             filename = cleaned_files[0]
     
+    # Load the specified cleaned dataset
     file_path = os.path.join(CLEANED_DIR, filename)
     df = pd.read_csv(file_path)
     
@@ -181,8 +183,9 @@ if __name__ == "__main__":
     print("="*40)
     print("🚀 SPAM CLASSIFIER PREPROCESSING")
     print("="*40)
+    # Run preprocessing on all datasets
     process_all_datasets()
-    df = load_cleaned_data()
+    df = load_dataset()
     if df is not None:
         print("Preprocessing completed. Sample data:")
         print(df.info())

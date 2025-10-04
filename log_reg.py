@@ -1,21 +1,23 @@
-# Logistic Regression Spam Classification Pipeline
+# Logistic Regression Spam Classification
 # Author: Your Name
 # Date: 2025-09-30
 
 
 import pandas as pd
 import numpy as np
+import joblib
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import StandardScaler
-from scipy.sparse import hstack
-import joblib
-from preprocessing import load_cleaned_data, clean_text, extract_features
+from preprocessing import load_dataset, clean_text, extract_features
 
-df = load_cleaned_data()
+MODEL_DIR = Path("saved_models")
+MODEL_DIR.mkdir(exist_ok=True)
+
+df = load_dataset()
 if df is None:
     raise ValueError("No data found. Run preprocessing first.")
 print(f"📊 {len(df):,} samples, {df['label'].mean():.1%} spam")
@@ -25,7 +27,7 @@ X_text = df['text'].fillna('')
 y = df['label']
 
 # Feature preparation - Essential feature 1: Combined TF-IDF + engineered features
-vectorizer = TfidfVectorizer(stop_words='english', max_features=1000)
+vectorizer = TfidfVectorizer(stop_words='english', max_features=5000)
 X = vectorizer.fit_transform(X_text)
 
 # Extract spam features for each text
@@ -47,8 +49,7 @@ print(f"🎯 AUC: {auc:.4f}")
 print(classification_report(y_test, y_pred, target_names=['Ham', 'Spam']))
 
 # Save model and vectorizer
-Path("saved_models").mkdir(exist_ok=True)
-joblib.dump({'model': model, 'vectorizer': vectorizer}, 'saved_models/log_reg_model.joblib')
+joblib.dump({'model': model, 'vectorizer': vectorizer}, MODEL_DIR / 'log_reg_model.joblib')
 print("💾 Logistic Regression Model saved")
 
 # Test predictions
@@ -80,13 +81,4 @@ test_emails = [
 
 for example_email in test_emails:
     label, prob = predict_email(example_email)
-    print(f"Prediction: {label} (Probability: {prob:.4f}) - {example_email:.15}")
-    # print(f"Example Email Prediction: {label} with probability {prob:.4f}")
-
-# Test feature extraction consistency
-test_text = "sample test text"
-X_test = vectorizer.transform([test_text])
-spam_features_test = [extract_features(test_text) + [len(test_text), len(test_text.split())]]
-X_features_test = np.array(spam_features_test)
-print(f"Sample feature extraction length: {len(spam_features_test[0])}")
-print(f"TF-IDF feature shape: {X_test.shape}")
+    print(f"Prediction: {label} (Probability: {prob:.2f}) - {example_email:.15}")
