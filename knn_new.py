@@ -3,7 +3,7 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
-import argparsec
+import argparse
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
