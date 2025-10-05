@@ -8,11 +8,11 @@ from preprocessing import load_dataset
 
 # Load the saved models
 print("Loading models...")
-log_reg_data = joblib.load('saved_models/log_reg_model.joblib')
+clf_model = joblib.load('saved_models/clf_model.joblib')
 knn_model = joblib.load('saved_models/knn_model.joblib')  # assuming this exists
 
-log_reg_model = log_reg_data['model']
-vectorizer = log_reg_data['vectorizer']
+log_reg_model = clf_model
+vectorizer = joblib.load('saved_models/vectorizer.joblib')
 
 # Load test data
 df = load_dataset()
@@ -87,13 +87,3 @@ print(classification_report(y_true, log_reg_pred, target_names=['Ham', 'Spam']))
 
 print("\n=== KNN Report ===")
 print(classification_report(y_true, knn_pred, target_names=['Ham', 'Spam']))
-
-# Determine winner
-if log_reg_acc > knn_acc:
-    winner = "Logistic Regression"
-    diff = log_reg_acc - knn_acc
-else:
-    winner = "KNN"
-    diff = knn_acc - log_reg_acc
-
-print(f"\n🏆 Winner: {winner} (by {diff:.3f} accuracy points)")

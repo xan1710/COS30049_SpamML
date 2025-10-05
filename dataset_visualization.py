@@ -10,10 +10,6 @@ warnings.filterwarnings('ignore')
 # Load the dataset
 df = pd.read_csv('datasets/cleaned_datasets/combined_email_dataset.csv')
 
-# Set up the plotting style
-plt.style.use('default')
-sns.set_palette("husl")
-
 # Create a comprehensive visualization dashboard
 fig = plt.figure(figsize=(20, 15))
 
