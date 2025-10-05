@@ -3,7 +3,7 @@ import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
-import argparsec
+import argparse
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
@@ -13,16 +13,17 @@ from preprocessing import load_dataset
 
 def main():
     # show help, let user choose which cleaned dataset to use & specify k val
+    default_pop_up_msg = "the knn model trainer. pick a cleaned dataset to train the model with."
     default_dataset = 'combined_email_dataset.csv'
     default_dataset_help = 'name of the cleaned dataset file in the cleaned_datasets folder'
-    parser = argparse.ArgumentParser(description="the knn model trainer. pick a cleaned dataset to train the model with.")
+    parser = argparse.ArgumentParser(description=default_pop_up_msg)
     parser.add_argument('--dataset', type=str, default=default_dataset, help=default_dataset_help)
     parser.add_argument('--k', type=int, default=5, help='specify k value')
     args = parser.parse_args()
 
     # print the name of cleaned dataset & k value being used to train
     print(f"Using cleaned dataset: {args.dataset}")
-    print(f"Using k value: {args.k}")
+    print(f"Using k value: {args.k}\n")
 
     # Load cleaned data. change here if using a different cleaned dataset
     # (pick from one of the individual cleaned datasets or the combined one).
