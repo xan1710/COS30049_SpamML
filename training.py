@@ -43,5 +43,6 @@ plt.ylabel('Actual')
 plt.show()
 
 # Save the model and vectorizer
-joblib.dump(model, 'logistic_regression_model.joblib')
-joblib.dump(vectorizer, 'vectorizer.joblib')
+Path("saved_models").mkdir(exist_ok=True)
+joblib.dump(model, 'saved_models/logistic_regression_model.joblib')
+joblib.dump(vectorizer, 'saved_models/vectorizer.joblib')

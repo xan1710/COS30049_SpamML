@@ -47,27 +47,23 @@ def detect_columns(df):
     
     return text_col, label_col
 
-def clean_text(text):
-    """Clean and normalize text efficiently"""
+def clean_text(s):
     # Handle NaN values
-    if pd.isna(text):
+    if pd.isna(s):
         return ''
     
-    text = str(text).lower()
-    text = re.sub(r'<[^>]+>', ' ', text)  # Remove HTML
-    text = re.sub(r'http\S+|www\S+|https\S+', ' ', text)  # Remove URLs
-    text = re.sub(r'\S+@\S+', ' ', text)  # Remove emails
-    text = re.sub(r'\d+', ' ', text)  # Remove numbers
-    text = text.replace('#', ' ').replace('@', ' ') #Remove # and @
-    text = re.sub(r'[^a-z0-9\s.,!?\'-]', ' ', text) # Keep basic punctuation
-    text = re.sub(r'\s+', ' ', text).strip() # Remove extra spaces
-    text = re.sub(r'\.{2,}', ' ', text)  # Replace multiple dots with space
-    text = re.sub(r'-{2,}', ' ', text)  # Replace multiple hyphens with space
-    text = re.sub(r'_{2,}', ' ', text)  # Replace multiple underscores with space
-    text = re.sub(r'!{4,}', '!', text)  # Replace multiple exclamation marks
-    text = re.sub(r'\?{3,}', '?', text)  # Replace multiple question marks
-    text = re.sub(r'\s+', ' ', text)  # Remove extra spaces
-    return text
+    s = str(s).lower()
+    s = re.sub(r'<[^>]+>', ' ', s)  # Remove HTML
+    s = re.sub(r'http\S+|www\S+', ' ', s)  # Remove URLs
+    s = re.sub(r'\S+@\S+', ' ', s)  # Remove emails
+    s = s.replace('#', ' ').replace('@', ' ') #Remove # and @
+    s = re.sub(r'[^a-z0-9\s.,!?\'-]', ' ', s) # Keep basic punctuation
+    s = re.sub(r'\n', ' ', s)  # Remove newlines
+    s = re.sub(r'\r', ' ', s)  # Remove carriage returns
+    s = re.sub(r'\s+', ' ', s)  # Remove extra spaces
+    s = re.sub(r'(\.{2,})|(-{2,})|(_{2,})|(!{4,})|(\?{3,})', ' ', s)  # Replace multiple special chars with space
+    s = s.strip() # Final trim
+    return s
 
 def extract_features(text):
     # Basic checks for empty text
@@ -106,7 +102,7 @@ def preprocess_dataset(file_path):
     
     # Create clean dataset DataFrame
     df_clean = pd.DataFrame()
-    df_clean['text'] = clean_text(df[text_col])
+    df_clean['text'] = df[text_col].apply(clean_text)
     df_clean['label'] = standardize_labels(df[label_col])
     
     # Extract features and add to DataFrame

@@ -12,10 +12,10 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import StandardScaler
 from scipy.sparse import hstack
 import joblib
-from preprocessing import load_cleaned_data, clean_text, extract_features
+from preprocessing import load_dataset, clean_text, extract_features
 
 # Load dataset
-df = load_cleaned_data()
+df = load_dataset()
 if df is None:
     raise ValueError("No data found. Run preprocessing first.")
 

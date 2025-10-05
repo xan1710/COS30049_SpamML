@@ -1,9 +1,13 @@
 import pandas as pd
 import numpy as np
+import joblib
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, roc_auc_score, f1_score, precision_score, recall_score
 from preprocessing import load_dataset
 
 def main():
@@ -37,9 +41,27 @@ def main():
     # models accuracy in classifying the test set. We also
     # print a confusion matrix.
     y_pred = knn.predict(X_test_scaled)
-    print("Accuracy:", accuracy_score(y_test, y_pred))
+
+    # Save the model
+    model_dir = Path("saved_models")
+    model_dir.mkdir(exist_ok=True)
+    joblib.dump(knn, model_dir / "knn_model.joblib")
+    joblib.dump(scaler, model_dir / "knn_scaler.joblib")
     print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
-    #print("Classification Report:\n", classification_report(y_test, y_pred, target_names=['Ham', 'Spam']))
+    print("Classification Report:\n", classification_report(y_test, y_pred, target_names=['Ham', 'Spam']))
+    print("ROC AUC Score:", roc_auc_score(y_test, y_pred))
+    print("Accuracy:", accuracy_score(y_test, y_pred))
+    print("F1 Score:", f1_score(y_test, y_pred))
+    print("Precision:", precision_score(y_test, y_pred))
+    print("Recall:", recall_score(y_test, y_pred))
+
+    cm = confusion_matrix(y_test, y_pred)
+    print("Confusion Matrix:\n", cm)
+    sns.heatmap(cm, annot=True, fmt='d')
+    plt.title('KNN Confusion Matrix')
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.show()
 
 if __name__ == "__main__":
     main()
