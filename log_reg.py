@@ -20,6 +20,8 @@ from preprocessing import load_dataset, clean_text, extract_features
 MODEL_DIR = Path("saved_models")
 MODEL_DIR.mkdir(exist_ok=True)
 
+# Evaluation function containing different metrics for evaluating the performance 
+# of a model on a test set. This includes accuracy, precision, recall, f1-score and roc-auc score
 def evaluate_model(y_true, y_pred, y_prob):
     print("Evaluation Metrics:")
     print("Accuracy:", accuracy_score(y_true, y_pred))
@@ -29,7 +31,7 @@ def evaluate_model(y_true, y_pred, y_prob):
     print("ROC AUC Score:", roc_auc_score(y_true, y_prob))
     print(classification_report(y_true, y_pred, target_names=['Ham', 'Spam']))
 
-# Test predictions
+# Test predictions of the model from text message and probability
 def predict_email(tfidf, clf, text):
     clean_text_input = clean_text(text)
     if not clean_text_input:
@@ -41,7 +43,7 @@ def predict_email(tfidf, clf, text):
     return label, y_prob
 
 def main():
-    # Load dataset
+    # Load dataset from datasets folder
     df = load_dataset()
     if df is None:
         raise ValueError("No data found. Run preprocessing first.")
@@ -52,36 +54,36 @@ def main():
     y = df['label']
 
     # Text vectorization using TfidfVectorizer 
-    tfidf = TfidfVectorizer(stop_words='english', max_features=5000)
+    tfidf = TfidfVectorizer(stop_words='english', max_features=1000)
     X = tfidf.fit_transform(X_text)
 
     # Train-test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-    # Train model - Essential feature 2: Optimized LogisticRegression
+    # Create and train a LogisticRegression classifier with parameters
     clf = LogisticRegression(C=10, random_state=42, max_iter=20000)
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
 
-    # Evaluation
+    # Calling evaluation method to print metrics for the model
     evaluate_model(y_test, y_pred, clf.predict_proba(X_test)[:, 1])
 
-    # Feature importance analysis
-    features_name = tfidf.get_feature_names_out()
-    coefs = clf.coef_[0]
-    spam_words = coefs.argsort()[::-1]
-    ham_words = coefs.argsort()
-    print("Top 5 positive coefficients (spam indicators):")
-    for coef in spam_words[:5]:
-        print(f"{features_name[coef]:<20}: {coef:.2f}")
-    print("Top 5 negative coefficients (ham indicators):")
-    for coef in ham_words[:5]:
-        print(f"{features_name[coef]:<20}: {coef:.2f}")
+    # # Feature importance analysis 
+    # features_name = tfidf.get_feature_names_out()
+    # coefs = clf.coef_[0]
+    # spam_words = coefs.argsort()[::-1]
+    # ham_words = coefs.argsort()
+    # print("Top 5 positive coefficients (spam indicators):")
+    # for coef in spam_words[:5]:
+    #     print(f"{features_name[coef]:<12}: {coef}")
+    # print("Top 5 negative coefficients (ham indicators):")
+    # for coef in ham_words[:5]:
+    #     print(f"{features_name[coef]:<12}: {coef}")
 
     # Save model and vectorizer
     joblib.dump(clf, MODEL_DIR / 'clf_model.joblib')
     joblib.dump(tfidf, MODEL_DIR / 'clf_vectorizer.joblib')
-    print("💾 Logistic Regression Model saved")
+    print("Logistic Regression Model saved")
 
     # Example usage
     test_emails = [

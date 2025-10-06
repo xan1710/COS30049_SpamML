@@ -9,10 +9,9 @@ from preprocessing import load_dataset
 # Load the saved models
 print("Loading models...")
 clf_model = joblib.load('saved_models/clf_model.joblib')
-knn_model = joblib.load('saved_models/knn_model.joblib')  # assuming this exists
-
-log_reg_model = clf_model
-vectorizer = joblib.load('saved_models/vectorizer.joblib')
+knn_model = joblib.load('saved_models/knn_model.joblib') 
+clf_vectorizer = joblib.load('saved_models/clf_vectorizer.joblib')
+knn_scaler = joblib.load('saved_models/knn_scaler.joblib')
 
 # Load test data
 df = load_dataset()
@@ -28,15 +27,16 @@ y_true = df['label']
 print("Getting predictions...")
 
 # Logistic regression predictions
-X_tfidf = vectorizer.transform(X_text)
-log_reg_pred = log_reg_model.predict(X_tfidf)
-log_reg_proba = log_reg_model.predict_proba(X_tfidf)[:, 1]
+X_tfidf = clf_vectorizer.transform(X_text)
+log_reg_pred = clf_model.predict(X_tfidf)
+log_reg_proba = clf_model.predict_proba(X_tfidf)[:, 1]
 
 # KNN predictions (assuming numeric features)
 feature_cols = ['number_ratio', 'special_char_ratio', 'spam_words', 'text_length', 'word_count']
 X_numeric = df[feature_cols]
-knn_pred = knn_model.predict(X_numeric)
-knn_proba = knn_model.predict_proba(X_numeric)[:, 1]
+X_numeric_scaled = knn_scaler.transform(X_numeric)
+knn_pred = knn_model.predict(X_numeric_scaled)
+knn_proba = knn_model.predict_proba(X_numeric_scaled)[:, 1]
 
 # Calculate accuracies
 log_reg_acc = accuracy_score(y_true, log_reg_pred)
