@@ -142,18 +142,14 @@ def process_all_datasets():
     
     # Process each dataset file, only when it exists as "cleaned" version
     for csv_file in csv_files:
-        try:
-            input_path = os.path.join(RAW_DIR, csv_file)
-            output_path = os.path.join(CLEANED_DIR, f"cleaned_{csv_file}")
-            
-            df_clean = preprocess_dataset(input_path)
-            
-            if df_clean is not None:
-                df_clean.to_csv(output_path, index=False)
-                all_datasets.append(df_clean)
-                
-        except Exception as e:
-            continue
+        input_path = os.path.join(RAW_DIR, csv_file)
+        output_path = os.path.join(CLEANED_DIR, f"cleaned_{csv_file}")
+        
+        df_clean = preprocess_dataset(input_path)
+        
+        if df_clean is not None:
+            df_clean.to_csv(output_path, index=False)
+            all_datasets.append(df_clean)
     
     # Create combined dataset if multiple datasets were processed
     if all_datasets:

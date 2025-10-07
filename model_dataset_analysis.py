@@ -47,7 +47,7 @@ knn_acc = accuracy_score(y_true, knn_pred)
 plt.subplot(2, 2, 1)
 models = ['Logistic Regression', 'KNN']
 accuracies = np.array([log_reg_acc, knn_acc])
-bars = plt.bar(models, accuracies, color=['#3498db', '#e67e22'], alpha=0.8)
+bars = plt.bar(models, accuracies, color=["#0099ff", "#ff7700"])
 plt.title('Model Accuracy Comparison', fontsize=14, fontweight='bold')
 plt.ylabel('Accuracy')
 plt.ylim(0, 1)
@@ -62,9 +62,9 @@ cm_log = confusion_matrix(y_true, log_reg_pred)
 cm_knn = confusion_matrix(y_true, knn_pred)
 
 # Create side-by-side confusion matrices
-x_pos = [0, 1, 3, 4]  # positions for the bars
-cm_values = [cm_log[0,0], cm_log[1,1], cm_knn[0,0], cm_knn[1,1]]  # TP values
-colors = ['#3498db', '#3498db', '#e67e22', '#e67e22']
+x_pos = [0, 1, 2, 3]  # positions for the bars
+cm_values = [cm_log[0,0], cm_log[1,1], cm_knn[0,0], cm_knn[1,1]]  # TP, TN values
+colors = ['#0099ff', '#0099ff', '#ff7700', '#ff7700']
 labels = ['LogReg\nTN', 'LogReg\nTP', 'KNN\nTN', 'KNN\nTP']
 
 bars = plt.bar(x_pos, cm_values, color=colors, alpha=0.8)
@@ -81,23 +81,17 @@ for i, v in enumerate(cm_values):
 # 3. Class Distribution
 plt.subplot(2, 2, 3)
 class_counts = df['label'].value_counts()
-colors = ['#2ecc71', '#e74c3c']
-# plt.pie(class_counts.to_numpy(), labels=['Ham', 'Spam'], autopct='%1.1f%%', 
-#         colors=colors, startangle=90)
-plt.pie(class_counts.to_numpy(), labels=['Ham', 'Spam'], autopct='%1.1f%%')
+plt.pie(class_counts.to_numpy(), labels=['Ham', 'Spam'], autopct='%.2f%%')
 plt.title('Email Classification Distribution', fontsize=14, fontweight='bold')
 
 # 4. Feature Correlation Matrix
 plt.subplot(2, 2, 4)
 numeric_cols = ['label', 'number_ratio', 'special_char_ratio', 'spam_words', 'text_length', 'word_count']
 correlation_matrix = df[numeric_cols].corr()
-# sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0, 
-#             square=True, fmt='.2f', cbar_kws={'shrink': 0.6})
-sns.heatmap(correlation_matrix, annot=True, cmap='viridis', center=0)
+sns.heatmap(correlation_matrix, annot=True, cmap='RdBu', center=0, fmt='.2f', square=True)
 plt.title('Feature Correlation Matrix', fontsize=14, fontweight='bold')
 
-plt.suptitle('Email Spam Detection - Model Comparison & Dataset Analysis', 
-             fontsize=18, fontweight='bold', y=0.98)
+plt.suptitle('Email Spam Detection - Model Comparison & Dataset Analysis', fontsize=18, fontweight='bold', y=0.98)
 plt.show()
 
 # Print comprehensive results summary. Display dataset overview 

@@ -57,9 +57,8 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
     # Create and train a LogisticRegression classifier with parameters
-    # to prevent overfitting. Since text data can be high-dimensional,
-    # we use L2 regularization.
-    clf = LogisticRegression(C=1.0, random_state=42, penalty='l2', max_iter=20000)
+    # to prevent overfitting. 
+    clf = LogisticRegression(C=1.0, random_state=42, solver='liblinear', max_iter=20000)
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
 
@@ -90,7 +89,7 @@ def main():
     # Confusion Matrix Visualization
     cm = confusion_matrix(y_test, y_pred)
     print("Confusion Matrix:\n", cm)
-    sns.heatmap(cm, annot=True, fmt='d')
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False, xticklabels=['Ham', 'Spam'], yticklabels=['Ham', 'Spam'])
     plt.title('Logistic Regression Confusion Matrix')
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
