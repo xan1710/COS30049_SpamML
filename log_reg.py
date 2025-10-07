@@ -65,7 +65,7 @@ def main():
 
     # Create and train a LogisticRegression classifier with parameters
     # to prevent overfitting. 
-    clf = LogisticRegression(C=1.0, random_state=42, solver='liblinear', max_iter=20000)
+    clf = LogisticRegression(class_weight= 'balanced', C=1.0, random_state=42, solver='liblinear', max_iter=20000)
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
 
@@ -96,7 +96,7 @@ def main():
     # Confusion Matrix Visualization
     cm = confusion_matrix(y_test, y_pred)
     print("Confusion Matrix:\n", cm)
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False, xticklabels=['Ham', 'Spam'], yticklabels=['Ham', 'Spam'])
+    sns.heatmap(cm, annot=True, fmt='d', xticklabels=['Ham', 'Spam'], yticklabels=['Ham', 'Spam'])
     plt.title('Logistic Regression Confusion Matrix')
     plt.xlabel('Predicted')
     plt.ylabel('Actual')

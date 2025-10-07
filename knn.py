@@ -79,7 +79,7 @@ def main():
     # plot a confusion matrix with test results
     cm = confusion_matrix(y_test, y_pred)
     print("Confusion Matrix:\n", cm)
-    sns.heatmap(cm, annot=True, fmt='d')
+    sns.heatmap(cm, annot=True, fmt='d', xticklabels=['Ham', 'Spam'], yticklabels=['Ham', 'Spam'])
     plt.title('KNN Confusion Matrix')
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
