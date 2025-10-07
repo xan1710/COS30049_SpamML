@@ -1,3 +1,11 @@
+# model_dataset_analysis.py
+# Author: PixelNest Labs
+# Date: 2025-10-07
+# This module provides comparison of the Logistic Regression and KNN models 
+# on performing spam detection, along with
+# visualizations of the dataset characteristics.
+
+# Import necessary libraries
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

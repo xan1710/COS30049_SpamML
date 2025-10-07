@@ -1,10 +1,9 @@
 # preprocessing.py
-# Author: Your Name
-# Date: 2025-09-30
-# This module contains functions for preprocessing text data
-# including handling missing values, text normalization, feature extraction,
-# and adaptive dataset handling for various email datasets.
+# Author: PixelNest Labs
+# Date: 2025-10-07
+# This module contains functions for preprocessing text data for spam detection.
 
+# Import necessary libraries
 import pandas as pd
 import re
 import numpy as np

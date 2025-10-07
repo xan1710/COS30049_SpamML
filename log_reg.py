@@ -1,3 +1,10 @@
+# log_reg.py
+# Author: PixelNest Labs
+# Date: 2025-10-07
+# This module contains functions for training and evaluating a Logistic Regression model
+# for spam detection.
+
+# Import necessary libraries
 import pandas as pd
 import numpy as np
 import joblib

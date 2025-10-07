@@ -1,3 +1,10 @@
+# knn.py
+# Author: PixelNest Labs
+# Date: 2025-10-05
+# This module contains functions for training and evaluating a KNN model
+# for spam detection.
+
+# Import necessary libraries
 import pandas as pd
 import numpy as np
 import joblib
