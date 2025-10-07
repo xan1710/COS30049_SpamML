@@ -1,6 +1,6 @@
 # COS30049_SpamML
 
-A machine learning project for spam email detection using various models (KNN, Logistic Regression, etc.). This guide will help you set up the environment, preprocess data, train models, and use them for prediction.
+This project implements machine learning models for spam email detection, including KNN and Logistic Regression. Follow this guide to set up the environment, preprocess data, train models, and use them for prediction.
 
 ## 1. Environment Setup
 
@@ -8,7 +8,7 @@ We recommend using [conda](https://docs.conda.io/en/latest/) for environment man
 
 ```bash
 # Clone the repository (if not already done)
-git clone https://github.com/your-name-here/COS30049_SpamML.git
+git clone https://github.com/xan1710/COS30049_SpamML.git
 cd COS30049_SpamML
 
 # Create a new conda environment from the provided file
@@ -17,7 +17,7 @@ conda env create -f environment.yml
 # Activate the environment
 conda activate cos30049_ml
 
-# (Optional) If you want to install manually:
+# (Optional) Manual installation:
 # conda create -n cos30049_ml python=3.13
 # conda activate cos30049_ml
 # pip install -r requirements.txt
@@ -25,10 +25,10 @@ conda activate cos30049_ml
 
 ## 2. Preprocessing Data
 
-Preprocessing scripts are provided to clean and prepare the datasets.
+
+Use the preprocessing script to clean and prepare the datasets:
 
 ```bash
-# Run preprocessing (example)
 python preprocessing.py
 ```
 
@@ -37,7 +37,8 @@ python preprocessing.py
 
 ## 3. Training Models
 
-You can train different models using the provided scripts:
+
+Train models using the provided scripts:
 
 ```bash
 # Train KNN model
@@ -51,18 +52,17 @@ python log_reg.py
 
 ## 4. Using Models for Prediction
 
-You can use the trained models to make predictions on new data:
+
+Use the trained models to make predictions on new data:
 
 ```python
-# Example usage in Python
 from joblib import load
-import pandas as pd
 
 # Load model and vectorizer
 model = load('saved_models/clf_model.joblib')
 vectorizer = load('saved_models/clf_vectorizer.joblib')
 
-# Prepare your input data (as a DataFrame or Series)
+# Prepare your input data (as a list of strings)
 X_new = vectorizer.transform(["Your email text here"])
 
 # Predict

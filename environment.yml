@@ -1,12 +1,15 @@
 name: cos30049_ml
+channels:
+  - defaults
+  - conda-forge
 dependencies:
   - python=3.13
   - pip
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - seaborn
   - pip:
-      - numpy
-      - pandas
-      - scikit-learn
-      - matplotlib
-      - seaborn
       - joblib
       - wordcloud
