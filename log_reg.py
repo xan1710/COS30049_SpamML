@@ -1,8 +1,3 @@
-# Logistic Regression Spam Classification
-# Author: Your Name
-# Date: 2025-09-30
-
-
 import pandas as pd
 import numpy as np
 import joblib
@@ -47,13 +42,14 @@ def main():
     df = load_dataset()
     if df is None:
         raise ValueError("No data found. Run preprocessing first.")
-    print(f"📊 {len(df):,} samples, {df['label'].mean():.1%} spam")
 
-    # Receive and preprocess features
+    # From the loaded dataset, we extract text and labels for X and y
+    # .fillna('') is used to handle any missing values in the text column
     X_text = df['text'].fillna('')
     y = df['label']
-
-    # Text vectorization using TfidfVectorizer 
+    
+    # Text vectorization using TfidfVectorizer with parameters 
+    # to limit features and remove stop words 
     tfidf = TfidfVectorizer(stop_words='english', max_features=1000)
     X = tfidf.fit_transform(X_text)
 
@@ -61,25 +57,17 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
     # Create and train a LogisticRegression classifier with parameters
-    clf = LogisticRegression(C=10, random_state=42, max_iter=20000)
+    # to prevent overfitting. Since text data can be high-dimensional,
+    # we use L2 regularization.
+    clf = LogisticRegression(C=1.0, random_state=42, penalty='l2', max_iter=20000)
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
 
-    # Calling evaluation method to print metrics for the model
+    # Calling evaluation method to print metrics for the model 
+    # on the test set. We also pass predicted probabilities
+    # for ROC AUC calculation.
     evaluate_model(y_test, y_pred, clf.predict_proba(X_test)[:, 1])
-
-    # # Feature importance analysis 
-    # features_name = tfidf.get_feature_names_out()
-    # coefs = clf.coef_[0]
-    # spam_words = coefs.argsort()[::-1]
-    # ham_words = coefs.argsort()
-    # print("Top 5 positive coefficients (spam indicators):")
-    # for coef in spam_words[:5]:
-    #     print(f"{features_name[coef]:<12}: {coef}")
-    # print("Top 5 negative coefficients (ham indicators):")
-    # for coef in ham_words[:5]:
-    #     print(f"{features_name[coef]:<12}: {coef}")
-
+    
     # Save model and vectorizer
     joblib.dump(clf, MODEL_DIR / 'clf_model.joblib')
     joblib.dump(tfidf, MODEL_DIR / 'clf_vectorizer.joblib')

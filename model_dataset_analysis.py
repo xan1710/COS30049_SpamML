@@ -19,6 +19,7 @@ knn_scaler = joblib.load('saved_models/knn_scaler.joblib')
 
 # Create the combined visualization
 fig = plt.figure(figsize=(10, 8))
+fig.legend(["Logistic Regression", "KNN"], loc='upper center', ncol=2, fontsize=12)
 
 # Prepare test data
 X_text = df['text'].fillna('')
@@ -40,10 +41,7 @@ knn_proba = knn_model.predict_proba(X_numeric_scaled)[:, 1]
 log_reg_acc = accuracy_score(y_true, log_reg_pred)
 knn_acc = accuracy_score(y_true, knn_pred)
 
-print(f"Logistic Regression Accuracy: {log_reg_acc:.3f}")
-print(f"KNN Accuracy: {knn_acc:.3f}")
-
-# MODEL COMPARISON PLOTS
+### MODEL COMPARISON PLOTS ###
 
 # 1. Model Accuracy Comparison
 plt.subplot(2, 2, 1)
@@ -78,7 +76,7 @@ plt.xticks(x_pos, labels)
 for i, v in enumerate(cm_values):
     plt.text(x_pos[i], v + max(cm_values)*0.01, str(v), ha='center', fontweight='bold')
 
-# DATASET VISUALIZATION PLOTS
+### DATASET VISUALIZATION PLOTS ###
 
 # 3. Class Distribution
 plt.subplot(2, 2, 3)
@@ -102,19 +100,15 @@ plt.suptitle('Email Spam Detection - Model Comparison & Dataset Analysis',
              fontsize=18, fontweight='bold', y=0.98)
 plt.show()
 
-# Print comprehensive results
-print("\n" + "=" * 80)
-print("DATASET OVERVIEW: \n")
+# Print comprehensive results summary. Display dataset overview 
+# and classification reports for both models 
+print("DATASET OVERVIEW:")
 print(f"Total emails: {len(df)}")
 print(f"Ham emails: {len(df[df['label'] == 0])}")
 print(f"Spam emails: {len(df[df['label'] == 1])}")
 
-print("\n" + "=" * 80)
-print("MODEL PERFORMANCE COMPARISON")
-print("=" * 80)
-
-print("\n=== Logistic Regression Report ===")
+print("===== Logistic Regression Report =====")
 print(classification_report(y_true, log_reg_pred, target_names=['Ham', 'Spam']))
 
-print("\n=== KNN Report ===")
+print("===== KNN Report =====")
 print(classification_report(y_true, knn_pred, target_names=['Ham', 'Spam']))

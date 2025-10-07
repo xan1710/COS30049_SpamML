@@ -26,7 +26,7 @@ def detect_columns(df):
     # Auto-detect text and label columns
     text_col, label_col = None, None
     
-    # Find text column
+    # Find text column by looking for common names or long text average length
     text_candidates = ['text', 'message', 'body', 'email', 'content', 'mail']
     for col in df.columns:
         if col.lower() in text_candidates or df[col].dtype == 'object':
@@ -37,8 +37,9 @@ def detect_columns(df):
                     break
             except:
                 continue
-    
-    # Find label column
+
+    # Find label column by looking for common names or binary values 
+    # (0/1, spam/ham, etc.)
     label_candidates = ['label', 'class', 'spam', 'target', 'y', 'category']
     for col in df.columns:
         if col.lower() in label_candidates:
@@ -48,7 +49,7 @@ def detect_columns(df):
     return text_col, label_col
 
 def clean_text(s):
-    # Handle NaN values
+    # Handle NaN values 
     if pd.isna(s):
         return ''
     
@@ -70,14 +71,20 @@ def extract_features(text):
     if not text:
         return [0, 0, 0]
     
-    # Ratio of numbers and special characters to total characters
-    number_ratio = sum(c.isdigit() for c in text) / len(text)
-    special_ratio = sum(not c.isalnum() and not c.isspace() for c in text) / len(text)
+    # Ratio of numbers and special characters to total characters in text
+    # to avoid division by zero, ensure text length > 0
+    if len(text) > 0:
+        number_ratio = sum(c.isdigit() for c in text) / len(text)
+        special_ratio = sum(not c.isalnum() and not c.isspace() for c in text) / len(text)
+    else:
+        number_ratio = 0
+        special_ratio = 0
 
-    # List of common spam words for counting
+    # List of common spam words for counting. This can be expanded as needed,
+    # since new spam words are constantly emerging.
     spam_words = ['free', 'win', 'urgent', 'money', 'click', 'now', 'offer',
                   'prize', 'deal', 'cash', 'gift', 'verify', 'guaranteed']
-    # Count spam words in text
+    # Count spam words in text (case insensitive)
     spam_count = sum(1 for word in spam_words if word in text.lower())
     
     return [number_ratio, special_ratio, spam_count]
@@ -92,7 +99,7 @@ def standardize_labels(labels):
         return (labels > 0.5).astype(int)
 
 def preprocess_dataset(file_path):
-    # Preprocess a single dataset file
+    # Preprocess a single dataset file and return cleaned DataFrame
     df = pd.read_csv(file_path)
     
     # Auto-detect columns if not specified
@@ -100,16 +107,16 @@ def preprocess_dataset(file_path):
     if not text_col or not label_col:
         return None
     
-    # Create clean dataset DataFrame
+    # Create clean dataset DataFrame with cleaned text and standardized labels
     df_clean = pd.DataFrame()
     df_clean['text'] = df[text_col].apply(clean_text)
     df_clean['label'] = standardize_labels(df[label_col])
     
-    # Extract features and add to DataFrame
+    # Extract features and add to DataFrame for numeric models like KNN
     features = df_clean['text'].apply(extract_features)
     df_clean[['number_ratio', 'special_char_ratio', 'spam_words']] = pd.DataFrame(features.tolist())
     
-    # Add simple text stats as features 
+    # Add simple text stats as features for numeric models like KNN
     df_clean['text_length'] = df_clean['text'].str.len()
     df_clean['word_count'] = df_clean['text'].str.split().str.len()
     
@@ -126,7 +133,7 @@ def process_all_datasets():
     if not os.path.exists(RAW_DIR):
         return
     
-    # Find all CSV files in RAW_DIR
+    # Find all CSV files in RAW_DIR to process
     csv_files = [f for f in os.listdir(RAW_DIR) if f.endswith('.csv')]
     if not csv_files:
         return
@@ -177,7 +184,7 @@ def load_dataset(filename=None):
 
 if __name__ == "__main__":
     print("="*40)
-    print("🚀 SPAM CLASSIFIER PREPROCESSING")
+    print("SPAM CLASSIFIER PREPROCESSING")
     print("="*40)
     # Run preprocessing on all datasets
     process_all_datasets()
