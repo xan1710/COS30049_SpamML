@@ -11,11 +11,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
-import warnings
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from preprocessing import load_dataset
 
-warnings.filterwarnings('ignore')
 
 # Load the dataset and models
 df = pd.read_csv('datasets/cleaned_datasets/combined_email_dataset.csv')
