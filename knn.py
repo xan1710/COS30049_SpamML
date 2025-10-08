@@ -18,6 +18,19 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, roc_auc_score, f1_score, precision_score, recall_score
 from preprocessing import load_dataset
 
+# Evaluation function containing different metrics for evaluating the performance 
+# of a model on both train and test sets. This includes accuracy, precision, recall, f1-score and roc-auc score
+def evaluate_model(y_train, y_train_pred, y_test, y_test_pred):
+    print("Evaluation Metrics:")
+    print("Train Accuracy:", accuracy_score(y_train, y_train_pred))
+    print("Test Accuracy:", accuracy_score(y_test, y_test_pred))
+    print("Precision:", precision_score(y_test, y_test_pred, pos_label=1))
+    print("Recall:", recall_score(y_test, y_test_pred, pos_label=1))
+    print("F1 Score:", f1_score(y_test, y_test_pred, pos_label=1))
+    print("ROC AUC Score:", roc_auc_score(y_test, y_test_pred))
+    print("Classification Report:")
+    print(classification_report(y_test, y_test_pred, target_names=['Ham', 'Spam']))
+
 def main():
     # show help, let user choose which cleaned dataset to use & specify k val
     default_pop_up_msg = "the knn model trainer. pick a cleaned dataset to train the model with."
@@ -58,26 +71,21 @@ def main():
     knn = KNeighborsClassifier(n_neighbors=args.k)
     knn.fit(X_train_scaled, y_train)
 
-    # Evaluate. we print some useful metrics including the
-    # models accuracy in classifying the test set. We also
-    # print a confusion matrix.
-    y_pred = knn.predict(X_test_scaled)
+    # Get predictions for both train and test sets
+    y_train_pred = knn.predict(X_train_scaled)
+    y_test_pred = knn.predict(X_test_scaled)
 
     # Save the model
     model_dir = Path("saved_models")
     model_dir.mkdir(exist_ok=True)
-    joblib.dump(knn, model_dir / "knn_model.joblib")
-    joblib.dump(scaler, model_dir / "knn_scaler.joblib")
-    print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
-    print("Classification Report:\n", classification_report(y_test, y_pred, target_names=['Ham', 'Spam']))
-    print("ROC AUC Score:", roc_auc_score(y_test, y_pred))
-    print("Accuracy:", accuracy_score(y_test, y_pred))
-    print("F1 Score:", f1_score(y_test, y_pred))
-    print("Precision:", precision_score(y_test, y_pred))
-    print("Recall:", recall_score(y_test, y_pred))
+    # joblib.dump(knn, model_dir / "knn_model.joblib")
+    # joblib.dump(scaler, model_dir / "knn_scaler.joblib")
+    
+    # Evaluate the model on both train and test sets
+    evaluate_model(y_train, y_train_pred, y_test, y_test_pred)
 
     # plot a confusion matrix with test results
-    cm = confusion_matrix(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_test_pred)
     print("Confusion Matrix:\n", cm)
     sns.heatmap(cm, annot=True, fmt='d', xticklabels=['Ham', 'Spam'], yticklabels=['Ham', 'Spam'])
     plt.title('KNN Confusion Matrix')

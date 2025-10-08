@@ -24,14 +24,15 @@ MODEL_DIR.mkdir(exist_ok=True)
 
 # Evaluation function containing different metrics for evaluating the performance 
 # of a model on a test set. This includes accuracy, precision, recall, f1-score and roc-auc score
-def evaluate_model(y_true, y_pred, y_prob):
+def evaluate_model(y_train, y_train_pred, y_test, y_test_pred, y_test_prob):
     print("Evaluation Metrics:")
-    print("Accuracy:", accuracy_score(y_true, y_pred))
-    print("Precision:", precision_score(y_true, y_pred, pos_label=1))
-    print("Recall:", recall_score(y_true, y_pred, pos_label=1))
-    print("F1 Score:", f1_score(y_true, y_pred, pos_label=1))
-    print("ROC AUC Score:", roc_auc_score(y_true, y_prob))
-    print(classification_report(y_true, y_pred, target_names=['Ham', 'Spam']))
+    print("Train Accuracy:", accuracy_score(y_train, y_train_pred))
+    print("Test Accuracy:", accuracy_score(y_test, y_test_pred))
+    print("Precision:", precision_score(y_test, y_test_pred, pos_label=1))
+    print("Recall:", recall_score(y_test, y_test_pred, pos_label=1))
+    print("F1 Score:", f1_score(y_test, y_test_pred, pos_label=1))
+    print("ROC AUC Score:", roc_auc_score(y_test, y_test_prob))
+    print(classification_report(y_test, y_test_pred, target_names=['Ham', 'Spam']))
 
 # Test predictions of the model from text message and probability
 def predict_email(tfidf, clf, text):
@@ -67,16 +68,19 @@ def main():
     # to prevent overfitting. 
     clf = LogisticRegression(class_weight= 'balanced', C=1.0, random_state=42, solver='liblinear', max_iter=20000)
     clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
+    
+    # Get predictions for both train and test sets
+    y_train_pred = clf.predict(X_train)
+    y_test_pred = clf.predict(X_test)
 
     # Calling evaluation method to print metrics for the model 
-    # on the test set. We also pass predicted probabilities
+    # on both train and test sets. We also pass predicted probabilities
     # for ROC AUC calculation.
-    evaluate_model(y_test, y_pred, clf.predict_proba(X_test)[:, 1])
+    evaluate_model(y_train, y_train_pred, y_test, y_test_pred, clf.predict_proba(X_test)[:, 1])
     
     # Save model and vectorizer
-    joblib.dump(clf, MODEL_DIR / 'clf_model.joblib')
-    joblib.dump(tfidf, MODEL_DIR / 'clf_vectorizer.joblib')
+    # joblib.dump(clf, MODEL_DIR / 'clf_model.joblib')
+    # joblib.dump(tfidf, MODEL_DIR / 'clf_vectorizer.joblib')
     print("Logistic Regression Model saved")
 
     # Example usage
@@ -94,7 +98,7 @@ def main():
         print(f"Prediction: {label} (Probability: {prob:.2f}) - {example_email:.30}")
 
     # Confusion Matrix Visualization
-    cm = confusion_matrix(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_test_pred)
     print("Confusion Matrix:\n", cm)
     sns.heatmap(cm, annot=True, fmt='d', xticklabels=['Ham', 'Spam'], yticklabels=['Ham', 'Spam'])
     plt.title('Logistic Regression Confusion Matrix')
