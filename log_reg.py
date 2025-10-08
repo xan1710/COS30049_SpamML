@@ -79,8 +79,8 @@ def main():
     evaluate_model(y_train, y_train_pred, y_test, y_test_pred, clf.predict_proba(X_test)[:, 1])
     
     # Save model and vectorizer
-    # joblib.dump(clf, MODEL_DIR / 'clf_model.joblib')
-    # joblib.dump(tfidf, MODEL_DIR / 'clf_vectorizer.joblib')
+    joblib.dump(clf, MODEL_DIR / 'clf_model.joblib')
+    joblib.dump(tfidf, MODEL_DIR / 'clf_vectorizer.joblib')
     print("Logistic Regression Model saved")
 
     # Example usage

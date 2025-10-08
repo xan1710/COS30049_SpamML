@@ -78,8 +78,8 @@ def main():
     # Save the model
     model_dir = Path("saved_models")
     model_dir.mkdir(exist_ok=True)
-    # joblib.dump(knn, model_dir / "knn_model.joblib")
-    # joblib.dump(scaler, model_dir / "knn_scaler.joblib")
+    joblib.dump(knn, model_dir / "knn_model.joblib")
+    joblib.dump(scaler, model_dir / "knn_scaler.joblib")
     
     # Evaluate the model on both train and test sets
     evaluate_model(y_train, y_train_pred, y_test, y_test_pred)
